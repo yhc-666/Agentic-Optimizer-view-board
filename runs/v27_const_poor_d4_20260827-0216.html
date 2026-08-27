@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v27_const_poor_d4_20260827-0216</title>
+<style>
+  :root {
+    --surface: #fcfcfb; --panel: #ffffff; --stripe: #f4f3ef;
+    --hairline: #e4e3df; --grid: #eeede9;
+    --ink: #0b0b0b; --ink2: #52514e; --ink3: #85837c;
+    --move: #eb6834; --change: #2a78d6; --noop: #a9a7a0;
+    --dead: #a9a7a0; --accent: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface: #1a1a19; --panel: #232322; --stripe: #212120;
+      --hairline: #35352f; --grid: #2b2b27;
+      --ink: #ffffff; --ink2: #c3c2b7; --ink3: #8d8c83;
+      --move: #d95926; --change: #3987e5; --noop: #6f6d66;
+      --dead: #6f6d66; --accent: #3987e5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--surface); color: var(--ink);
+    font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  code, .mono { font-family: ui-monospace, Menlo, "DejaVu Sans Mono", monospace; }
+
+  header { padding: 18px 22px 14px; border-bottom: 1px solid var(--hairline); }
+  h1 { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--ink3); }
+  .chips b { color: var(--ink2); font-weight: 600; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 0; }
+  @media (max-width: 1250px) { .layout { grid-template-columns: 1fr; } }
+  .left { border-right: 1px solid var(--hairline); min-width: 0; }
+  section { padding: 14px 18px 18px; border-bottom: 1px solid var(--hairline); }
+  .sec-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; margin-bottom: 10px; flex-wrap: wrap;
+  }
+  h2 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink3); }
+  .scroll-x { overflow-x: auto; }
+  svg { display: block; }
+  .hint { font-size: 12px; color: var(--ink3); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 6px; }
+  button {
+    font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 999px;
+    border: 1px solid var(--hairline); background: var(--panel); color: var(--ink2);
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--ink3); }
+  button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .detail { min-width: 0; padding: 14px 18px 60px; }
+  .detail h3 { margin: 0 0 2px; font-size: 16px; font-weight: 600; }
+  .detail .sub { color: var(--ink3); font-size: 12.5px; margin-bottom: 14px; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; font-size: 13px; margin: 0 0 14px; }
+  .kv dt { color: var(--ink3); }
+  .kv dd { margin: 0; }
+  .summary-field { margin-bottom: 9px; }
+  .summary-field .label {
+    font-size: 11px; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--ink3); margin-bottom: 1px;
+  }
+  details { border-top: 1px solid var(--hairline); padding: 8px 0; }
+  details > summary {
+    cursor: pointer; list-style: none; font-size: 12.5px; color: var(--ink2);
+    display: flex; align-items: center; gap: 7px;
+  }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::before { content: "▸"; color: var(--ink3); font-size: 10px; }
+  details[open] > summary::before { content: "▾"; }
+  details > summary:hover { color: var(--ink); }
+  .round-tools { color: var(--ink3); font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
+  pre {
+    margin: 8px 0 4px; padding: 10px 12px; background: var(--stripe);
+    border-radius: 7px; overflow-x: auto; font-size: 12px; line-height: 1.5;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .call-name { color: var(--accent); font-weight: 600; }
+  .pill {
+    display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px;
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  .pill.move   { background: color-mix(in srgb, var(--move) 16%, transparent);   color: var(--move); }
+  .pill.change { background: color-mix(in srgb, var(--change) 16%, transparent); color: var(--change); }
+  .pill.noop   { background: var(--stripe); color: var(--ink3); }
+  .empty { color: var(--ink3); font-size: 13px; padding: 40px 0; text-align: center; }
+
+  .node { cursor: pointer; }
+  .node:hover .halo { opacity: .28; }
+  .lane-label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
+  .node-label {
+    font-family: ui-monospace, Menlo, monospace; font-size: 11px;
+    stroke: var(--surface); stroke-width: 3.5; paint-order: stroke fill;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="run-title"></h1>
+  <div class="chips" id="run-chips"></div>
+</header>
+
+<div class="layout">
+  <div class="left">
+    <section>
+      <div class="sec-head">
+        <h2>操作树</h2>
+        <span class="hint">点节点查看该次 review 的完整记录</span>
+      </div>
+      <div class="scroll-x"><svg id="tree"></svg></div>
+    </section>
+    <section>
+      <div class="sec-head">
+        <h2>曲线</h2>
+        <div class="controls" id="metric-buttons"></div>
+      </div>
+      <div class="controls" id="branch-buttons" style="margin-bottom:10px"></div>
+      <div class="scroll-x"><svg id="curve"></svg></div>
+      <div class="hint" id="curve-note" style="margin-top:8px"></div>
+    </section>
+  </div>
+  <aside class="detail" id="detail"></aside>
+</div>
+
+<script id="run-data" type="application/json">{"run_id":"v27_const_poor_d4_20260827-0216","config":{"run_id":"v27_const_poor_d4","outputs_dir":"outputs","resume":"","save_checkpoints":"auto","device_type":"mps","compile":0,"depth":4,"aspect_ratio":64,"head_dim":128,"max_seq_len":512,"window_pattern":"L","num_iterations":6000,"target_param_data_ratio":12.0,"total_batch_size":16384,"device_batch_size":8,"matrix_lr":0.0006,"embedding_lr":0.3,"unembedding_lr":0.008,"scalar_lr":0.5,"weight_decay":0.0,"beta1":0.95,"beta2":0.999,"eps":1e-10,"base_lr_scale":3.0,"schedule":"constant","warmup_steps":40,"wsd_decay_ratio":0.65,"final_lr_frac":0.05,"data_dir":"","score_window":100,"agent":"off","review_every":200,"replay_cap_ratio":3.0,"lr_mult_min":0.01,"lr_mult_max":10.0,"half_life_min":1.0,"half_life_max":1000.0,"memory_window":4,"packet_windows":24,"agent_model":"gemini-3.5-flash","expected_prompt_version":"","agent_effort":"high","agent_base_url":"https://aigc.sankuai.com/v1/openai/native","agent_chat_path":"/chat/completions","api_keys_file":"docs/api_keys_remote_set1.md","agent_temperature":0.6,"agent_max_output_tokens":8000,"api_timeout":180.0,"api_max_retries":6,"api_backoff_base":2.0,"parse_max_retries":2,"max_agent_rounds":24,"max_tool_calls":40,"run_dir":"outputs/v27_const_poor_d4_20260827-0216","target_lineage_tokens":98304000,"model_dim":256,"num_heads":2,"params_total":54657106,"grad_accum_steps":4,"compute_dtype":"torch.float32","action_limits":{"lr_multiplier_range":[0.01,10.0],"beta_half_life_range_steps":[1.0,1000.0],"hard_rule":"beta1 half-life must stay strictly below beta2 half-life"},"group_initial_lrs":{"matrix":0.003117691453623979,"embedding":1.5588457268119897,"value_embeds":0.7794228634059949,"lm_head":0.04156921938165306,"resid_lambdas":0.015,"x0_lambdas":1.5,"smear":0.6000000000000001}},"accounting":{"target_lineage_tokens":98304000,"replay_cap_ratio":3.0,"replay_wallet_tokens":196608000,"wallet_remaining_tokens":196608000,"lineage_tokens":98304000,"replayed_tokens":0,"pending_tokens":0,"executed_tokens":98304000,"move_count":0,"api_requests":0,"api_input_tokens":0,"api_output_tokens":0,"api_retries":0,"parse_retries":0,"rejected_actions":0,"api_failed_reviews":0,"parse_failed_reviews":0,"agent_wall_clock_s":0.0,"crash_discarded_tokens":0,"resume_count":0},"fuel":{"total_steps":12000,"spent_steps":0,"remaining_steps":12000},"score":{"score_window_steps":100,"final_train_loss_mean":4.811105,"final_branch":0,"total_steps":6000},"total_steps":6000,"bin_size":50,"branches":[{"branch":0,"parent":null,"fork_step":0,"created_by":null,"first_step":0,"last_step":5999,"on_path":true,"path_until":null}],"windows":{"0":[{"step":25.0,"n":50,"loss":[8.756573,7.370851,10.824584],"grad_norm":[1.46954,0.278391,17.270292],"update_to_weight":[0.075734,0.014434,0.108375],"momentum_alignment":[0.064532,-0.426618,0.717835],"grad_sq_vs_v":[5.679536,0.035737,224.965139]},{"step":75.0,"n":50,"loss":[7.564976,6.771988,8.449957],"grad_norm":[0.472281,0.305815,0.738233],"update_to_weight":[0.025844,0.016463,0.044166],"momentum_alignment":[0.008142,-0.172916,0.199682],"grad_sq_vs_v":[0.0439,0.018643,0.10956]},{"step":125.0,"n":50,"loss":[7.123765,6.656903,7.7002],"grad_norm":[0.354016,0.254135,0.449417],"update_to_weight":[0.013333,0.01166,0.0163],"momentum_alignment":[-0.013056,-0.262486,0.175642],"grad_sq_vs_v":[0.041695,0.024057,0.076221]},{"step":175.0,"n":50,"loss":[6.890834,6.561227,7.676993],"grad_norm":[0.294518,0.218847,0.551852],"update_to_weight":[0.010597,0.010083,0.011529],"momentum_alignment":[-0.031369,-0.308053,0.151172],"grad_sq_vs_v":[0.042,0.023229,0.15797]},{"step":225.0,"n":50,"loss":[6.833518,5.524034,7.534436],"grad_norm":[0.287582,0.195081,0.652397],"update_to_weight":[0.009945,0.009045,0.010837],"momentum_alignment":[-0.007594,-0.353321,0.325747],"grad_sq_vs_v":[0.053595,0.024247,0.233763]},{"step":275.0,"n":50,"loss":[6.731172,6.169952,7.669034],"grad_norm":[0.265392,0.180284,0.615894],"update_to_weight":[0.009174,0.00889,0.009381],"momentum_alignment":[0.006636,-0.317378,0.499603],"grad_sq_vs_v":[0.056765,0.026077,0.295951]},{"step":325.0,"n":50,"loss":[6.522758,6.220288,7.139817],"grad_norm":[0.21139,0.151988,0.398415],"update_to_weight":[0.008755,0.00859,0.00898],"momentum_alignment":[0.004443,-0.174652,0.131373],"grad_sq_vs_v":[0.041628,0.022054,0.151101]},{"step":375.0,"n":50,"loss":[6.463417,6.063707,6.893191],"grad_norm":[0.202047,0.148433,0.398735],"update_to_weight":[0.00851,0.008348,0.008779],"momentum_alignment":[0.006214,-0.247884,0.241728],"grad_sq_vs_v":[0.045725,0.022732,0.179611]},{"step":425.0,"n":50,"loss":[6.33769,5.934141,6.925579],"grad_norm":[0.18917,0.143712,0.312827],"update_to_weight":[0.008041,0.007624,0.008509],"momentum_alignment":[0.007334,-0.126854,0.14588],"grad_sq_vs_v":[0.044898,0.027007,0.115756]},{"step":475.0,"n":50,"loss":[6.267664,5.821825,6.686506],"grad_norm":[0.179535,0.140624,0.30564],"update_to_weight":[0.007759,0.007444,0.007964],"momentum_alignment":[0.004785,-0.111177,0.107853],"grad_sq_vs_v":[0.046335,0.027722,0.126368]},{"step":525.0,"n":50,"loss":[6.223492,5.508396,6.811606],"grad_norm":[0.205216,0.147524,0.469778],"update_to_weight":[0.007417,0.007202,0.007659],"momentum_alignment":[-0.019313,-0.193532,0.102576],"grad_sq_vs_v":[0.071744,0.033705,0.35525]},{"step":575.0,"n":50,"loss":[6.368892,5.859701,7.571126],"grad_norm":[0.233311,0.159718,0.530881],"update_to_weight":[0.007377,0.00715,0.007717],"momentum_alignment":[-0.001847,-0.32821,0.395723],"grad_sq_vs_v":[0.107894,0.04617,0.482702]},{"step":625.0,"n":50,"loss":[6.132813,5.565408,6.498489],"grad_norm":[0.189913,0.139463,0.313863],"update_to_weight":[0.00676,0.006415,0.00734],"momentum_alignment":[-0.021607,-0.261255,0.201751],"grad_sq_vs_v":[0.071236,0.038592,0.192838]},{"step":675.0,"n":50,"loss":[6.187221,5.825027,7.025665],"grad_norm":[0.229664,0.13629,0.630125],"update_to_weight":[0.006595,0.006361,0.006971],"momentum_alignment":[-0.017419,-0.283448,0.487404],"grad_sq_vs_v":[0.130476,0.03862,0.851903]},{"step":725.0,"n":50,"loss":[6.037875,5.411533,6.920008],"grad_norm":[0.188595,0.13667,0.265334],"update_to_weight":[0.006117,0.005818,0.006452],"momentum_alignment":[-0.01817,-0.257653,0.18008],"grad_sq_vs_v":[0.084938,0.043932,0.160963]},{"step":775.0,"n":50,"loss":[5.950243,5.467039,6.410045],"grad_norm":[0.175957,0.128434,0.26783],"update_to_weight":[0.005785,0.005576,0.005938],"momentum_alignment":[-0.009809,-0.150567,0.157318],"grad_sq_vs_v":[0.080493,0.042023,0.18339]},{"step":825.0,"n":50,"loss":[5.964419,5.507839,6.732752],"grad_norm":[0.218232,0.137049,0.529497],"update_to_weight":[0.005739,0.005571,0.005913],"momentum_alignment":[-0.038842,-0.445892,0.237884],"grad_sq_vs_v":[0.149874,0.051306,0.783108]},{"step":875.0,"n":50,"loss":[5.838806,5.295423,6.279789],"grad_norm":[0.190133,0.140674,0.301189],"update_to_weight":[0.005472,0.005321,0.005768],"momentum_alignment":[-0.045086,-0.297357,0.151256],"grad_sq_vs_v":[0.110261,0.058575,0.270618]},{"step":925.0,"n":50,"loss":[5.838335,5.386526,6.439991],"grad_norm":[0.17595,0.138276,0.293535],"update_to_weight":[0.005427,0.005287,0.00556],"momentum_alignment":[-0.02347,-0.182518,0.170284],"grad_sq_vs_v":[0.103025,0.061141,0.286293]},{"step":975.0,"n":50,"loss":[5.816907,5.077984,6.782861],"grad_norm":[0.191144,0.141641,0.372513],"update_to_weight":[0.005423,0.00511,0.00578],"momentum_alignment":[-0.016839,-0.167515,0.400378],"grad_sq_vs_v":[0.132981,0.068436,0.466217]},{"step":1025.0,"n":50,"loss":[5.793976,5.483791,6.28574],"grad_norm":[0.189103,0.141472,0.407345],"update_to_weight":[0.005157,0.005012,0.005395],"momentum_alignment":[-0.030644,-0.18065,0.119622],"grad_sq_vs_v":[0.141707,0.072915,0.613755]},{"step":1075.0,"n":50,"loss":[5.788831,5.338219,6.448337],"grad_norm":[0.193801,0.144686,0.530991],"update_to_weight":[0.005088,0.004961,0.005284],"momentum_alignment":[-0.036151,-0.230714,0.086107],"grad_sq_vs_v":[0.166176,0.081324,1.130135]},{"step":1125.0,"n":50,"loss":[5.755943,5.399366,6.170882],"grad_norm":[0.198298,0.143779,0.389285],"update_to_weight":[0.005026,0.004815,0.005327],"momentum_alignment":[-0.04401,-0.191846,0.137439],"grad_sq_vs_v":[0.174372,0.085444,0.64597]},{"step":1175.0,"n":50,"loss":[5.719341,5.202594,6.462565],"grad_norm":[0.196047,0.144743,0.497632],"update_to_weight":[0.004801,0.004638,0.004944],"momentum_alignment":[-0.051179,-0.306293,0.421643],"grad_sq_vs_v":[0.183325,0.091156,1.087606]},{"step":1225.0,"n":50,"loss":[5.731735,5.376009,6.298749],"grad_norm":[0.183957,0.142671,0.286533],"update_to_weight":[0.004766,0.004577,0.005026],"momentum_alignment":[-0.02841,-0.138487,0.234213],"grad_sq_vs_v":[0.163672,0.096264,0.379728]},{"step":1275.0,"n":50,"loss":[5.646464,5.305936,6.061626],"grad_norm":[0.185014,0.147489,0.295059],"update_to_weight":[0.004651,0.004508,0.004741],"momentum_alignment":[-0.044444,-0.207296,0.073639],"grad_sq_vs_v":[0.1759,0.110309,0.428969]},{"step":1325.0,"n":50,"loss":[5.622392,4.994957,5.977486],"grad_norm":[0.164254,0.131651,0.304883],"update_to_weight":[0.004535,0.004401,0.004679],"momentum_alignment":[-0.026298,-0.162883,0.080246],"grad_sq_vs_v":[0.147331,0.094324,0.490968]},{"step":1375.0,"n":50,"loss":[5.649813,5.326314,6.204968],"grad_norm":[0.191843,0.142292,0.366385],"update_to_weight":[0.004582,0.004485,0.004798],"momentum_alignment":[-0.046309,-0.183071,0.13503],"grad_sq_vs_v":[0.221201,0.113164,0.770836]},{"step":1425.0,"n":50,"loss":[5.600681,5.235443,6.271079],"grad_norm":[0.195483,0.142384,0.334789],"update_to_weight":[0.004549,0.004449,0.004693],"momentum_alignment":[-0.036504,-0.164768,0.09882],"grad_sq_vs_v":[0.236425,0.118735,0.664486]},{"step":1475.0,"n":50,"loss":[5.594519,5.250275,6.1302],"grad_norm":[0.170532,0.140471,0.251741],"update_to_weight":[0.004418,0.004273,0.004587],"momentum_alignment":[-0.016942,-0.12815,0.114758],"grad_sq_vs_v":[0.184508,0.122103,0.385436]},{"step":1525.0,"n":50,"loss":[5.599151,4.991763,6.133095],"grad_norm":[0.184498,0.141128,0.417023],"update_to_weight":[0.004354,0.004276,0.004456],"momentum_alignment":[-0.041636,-0.194273,0.158775],"grad_sq_vs_v":[0.234453,0.128106,1.147074]},{"step":1575.0,"n":50,"loss":[5.563768,5.270198,6.142182],"grad_norm":[0.19651,0.147567,0.387553],"update_to_weight":[0.00429,0.004215,0.004398],"momentum_alignment":[-0.037618,-0.163557,0.116551],"grad_sq_vs_v":[0.273546,0.147591,1.024138]},{"step":1625.0,"n":50,"loss":[5.54608,4.638602,5.915482],"grad_norm":[0.244151,0.145207,0.536194],"update_to_weight":[0.004245,0.004071,0.004411],"momentum_alignment":[-0.038794,-0.458089,0.370494],"grad_sq_vs_v":[0.47038,0.149064,2.081572]},{"step":1675.0,"n":50,"loss":[5.59544,5.195731,6.154417],"grad_norm":[0.24721,0.160613,0.537524],"update_to_weight":[0.004172,0.004023,0.004302],"momentum_alignment":[-0.071508,-0.498507,0.256562],"grad_sq_vs_v":[0.488526,0.191663,2.095015]},{"step":1725.0,"n":50,"loss":[5.525906,5.116529,6.034212],"grad_norm":[0.170368,0.133468,0.257529],"update_to_weight":[0.004035,0.003916,0.004175],"momentum_alignment":[-0.031377,-0.223303,0.099259],"grad_sq_vs_v":[0.227171,0.135545,0.513279]},{"step":1775.0,"n":50,"loss":[5.456287,5.073697,5.897133],"grad_norm":[0.175746,0.13831,0.259198],"update_to_weight":[0.003965,0.003791,0.004079],"momentum_alignment":[-0.038228,-0.256013,0.302354],"grad_sq_vs_v":[0.254371,0.156388,0.531226]},{"step":1825.0,"n":50,"loss":[5.479719,4.797208,5.847991],"grad_norm":[0.172209,0.136598,0.283897],"update_to_weight":[0.003968,0.003852,0.004071],"momentum_alignment":[-0.037367,-0.163273,0.048517],"grad_sq_vs_v":[0.254505,0.158299,0.66298]},{"step":1875.0,"n":50,"loss":[5.452214,5.158319,5.777159],"grad_norm":[0.191653,0.13517,0.281716],"update_to_weight":[0.003912,0.003814,0.004021],"momentum_alignment":[-0.042833,-0.262427,0.175001],"grad_sq_vs_v":[0.331825,0.158937,0.69767]},{"step":1925.0,"n":50,"loss":[5.42247,5.092257,5.913429],"grad_norm":[0.176375,0.128251,0.258513],"update_to_weight":[0.003845,0.003702,0.003997],"momentum_alignment":[-0.037152,-0.209656,0.163432],"grad_sq_vs_v":[0.288761,0.148721,0.618183]},{"step":1975.0,"n":50,"loss":[5.405429,4.838435,6.058317],"grad_norm":[0.175009,0.140997,0.254756],"update_to_weight":[0.003793,0.003662,0.00392],"momentum_alignment":[-0.041931,-0.180878,0.073526],"grad_sq_vs_v":[0.296329,0.189095,0.615216]},{"step":2025.0,"n":50,"loss":[5.460547,4.931944,5.963384],"grad_norm":[0.26172,0.149517,1.197528],"update_to_weight":[0.003786,0.003678,0.003904],"momentum_alignment":[-0.053813,-0.236649,0.139653],"grad_sq_vs_v":[0.92907,0.218598,13.931984]},{"step":2075.0,"n":50,"loss":[5.407275,5.143899,5.722048],"grad_norm":[0.193199,0.14412,0.267566],"update_to_weight":[0.003738,0.003597,0.003812],"momentum_alignment":[-0.038564,-0.211372,0.123143],"grad_sq_vs_v":[0.3779,0.206279,0.709573]},{"step":2125.0,"n":50,"loss":[5.426704,5.053717,5.92529],"grad_norm":[0.177469,0.141194,0.256476],"update_to_weight":[0.003651,0.003565,0.003816],"momentum_alignment":[-0.033383,-0.240423,0.145022],"grad_sq_vs_v":[0.331115,0.20525,0.686242]},{"step":2175.0,"n":50,"loss":[5.482528,4.921632,5.961654],"grad_norm":[0.25474,0.167511,0.881712],"update_to_weight":[0.003786,0.003638,0.004032],"momentum_alignment":[-0.053637,-0.456163,0.781584],"grad_sq_vs_v":[0.805074,0.292921,8.139276]},{"step":2225.0,"n":50,"loss":[5.421829,5.119353,6.307939],"grad_norm":[0.206846,0.155244,0.654572],"update_to_weight":[0.003635,0.003516,0.003766],"momentum_alignment":[-0.048766,-0.248558,0.272877],"grad_sq_vs_v":[0.521083,0.258218,4.614934]},{"step":2275.0,"n":50,"loss":[5.391715,4.782443,5.878071],"grad_norm":[0.19111,0.153314,0.294061],"update_to_weight":[0.003611,0.003465,0.003708],"momentum_alignment":[-0.0338,-0.191557,0.130056],"grad_sq_vs_v":[0.41535,0.258922,0.95625]},{"step":2325.0,"n":50,"loss":[5.386433,4.92446,5.851136],"grad_norm":[0.200333,0.142856,0.323894],"update_to_weight":[0.003558,0.00341,0.003673],"momentum_alignment":[-0.014727,-0.334397,0.52354],"grad_sq_vs_v":[0.47367,0.235275,1.179284]},{"step":2375.0,"n":50,"loss":[5.38711,4.932231,5.946379],"grad_norm":[0.196301,0.147373,0.421643],"update_to_weight":[0.003466,0.003361,0.003548],"momentum_alignment":[-0.052,-0.305358,0.22416],"grad_sq_vs_v":[0.474215,0.251339,2.077804]},{"step":2425.0,"n":50,"loss":[5.405022,4.703178,6.421508],"grad_norm":[0.239421,0.146038,0.715307],"update_to_weight":[0.00356,0.003426,0.003741],"momentum_alignment":[-0.04694,-0.245883,0.598268],"grad_sq_vs_v":[0.854101,0.253955,6.198277]},{"step":2475.0,"n":50,"loss":[5.435412,5.076389,6.861045],"grad_norm":[0.224921,0.15323,0.471137],"update_to_weight":[0.003497,0.003376,0.003658],"momentum_alignment":[-0.049831,-0.455164,0.294529],"grad_sq_vs_v":[0.66818,0.28455,2.684978]},{"step":2525.0,"n":50,"loss":[5.273512,4.467615,5.816466],"grad_norm":[0.217439,0.141272,0.344539],"update_to_weight":[0.003399,0.00326,0.003623],"momentum_alignment":[-0.019647,-0.27475,0.303506],"grad_sq_vs_v":[0.613997,0.248064,1.456301]},{"step":2575.0,"n":50,"loss":[5.311888,4.947521,5.635596],"grad_norm":[0.175464,0.132344,0.259737],"update_to_weight":[0.003309,0.003225,0.003434],"momentum_alignment":[-0.026964,-0.236776,0.158872],"grad_sq_vs_v":[0.402561,0.222119,0.856266]},{"step":2625.0,"n":50,"loss":[5.438533,5.125781,7.285471],"grad_norm":[0.272944,0.136186,0.598659],"update_to_weight":[0.00334,0.003257,0.003491],"momentum_alignment":[-0.060371,-0.605685,0.72967],"grad_sq_vs_v":[1.115724,0.23981,4.629347]},{"step":2675.0,"n":50,"loss":[5.301422,4.907646,6.444882],"grad_norm":[0.199556,0.147352,0.422422],"update_to_weight":[0.003335,0.003193,0.003505],"momentum_alignment":[-0.054759,-0.358784,0.236913],"grad_sq_vs_v":[0.545735,0.279076,2.312585]},{"step":2725.0,"n":50,"loss":[5.298526,4.946286,5.763743],"grad_norm":[0.1706,0.125343,0.228538],"update_to_weight":[0.003181,0.003063,0.003291],"momentum_alignment":[-0.033038,-0.162492,0.103604],"grad_sq_vs_v":[0.395368,0.211147,0.685322]},{"step":2775.0,"n":50,"loss":[5.26113,5.050939,5.578956],"grad_norm":[0.171602,0.137105,0.260397],"update_to_weight":[0.003116,0.003066,0.003203],"momentum_alignment":[-0.034458,-0.253271,0.214977],"grad_sq_vs_v":[0.415741,0.261643,0.936893]},{"step":2825.0,"n":50,"loss":[5.270815,4.494186,6.818744],"grad_norm":[0.209694,0.135251,0.580262],"update_to_weight":[0.003115,0.00302,0.00322],"momentum_alignment":[-0.064247,-0.45552,0.262854],"grad_sq_vs_v":[0.695748,0.257868,4.750133]},{"step":2875.0,"n":50,"loss":[5.251314,4.847407,5.640049],"grad_norm":[0.199768,0.140953,0.32863],"update_to_weight":[0.003173,0.003102,0.003318],"momentum_alignment":[-0.033233,-0.150607,0.203769],"grad_sq_vs_v":[0.597205,0.286244,1.54499]},{"step":2925.0,"n":50,"loss":[5.252909,4.687353,6.087096],"grad_norm":[0.185136,0.143097,0.311219],"update_to_weight":[0.003141,0.003058,0.003226],"momentum_alignment":[-0.037488,-0.198338,0.211526],"grad_sq_vs_v":[0.524862,0.297026,1.43368]},{"step":2975.0,"n":50,"loss":[5.243526,4.975192,6.094563],"grad_norm":[0.194139,0.145247,0.372151],"update_to_weight":[0.003185,0.003054,0.003327],"momentum_alignment":[-0.051886,-0.295867,0.19839],"grad_sq_vs_v":[0.597152,0.318538,2.102836]},{"step":3025.0,"n":50,"loss":[5.201831,4.634546,5.529824],"grad_norm":[0.18928,0.147963,0.296473],"update_to_weight":[0.003113,0.003001,0.003204],"momentum_alignment":[-0.039379,-0.267217,0.173583],"grad_sq_vs_v":[0.565095,0.338182,1.33865]},{"step":3075.0,"n":50,"loss":[5.196522,4.982866,5.48444],"grad_norm":[0.167498,0.145636,0.236205],"update_to_weight":[0.003073,0.003011,0.003139],"momentum_alignment":[-0.034361,-0.114544,0.098886],"grad_sq_vs_v":[0.449188,0.339129,0.867288]},{"step":3125.0,"n":50,"loss":[5.215073,4.786677,5.930509],"grad_norm":[0.193005,0.140058,0.278034],"update_to_weight":[0.003072,0.003007,0.003175],"momentum_alignment":[-0.048518,-0.226834,0.081774],"grad_sq_vs_v":[0.616483,0.314724,1.262326]},{"step":3175.0,"n":50,"loss":[5.141727,4.604161,5.587953],"grad_norm":[0.196479,0.136805,0.349692],"update_to_weight":[0.003052,0.002947,0.003203],"momentum_alignment":[-0.045545,-0.278644,0.281419],"grad_sq_vs_v":[0.656655,0.308776,2.021604]},{"step":3225.0,"n":50,"loss":[5.1954,4.274054,5.99158],"grad_norm":[0.243882,0.173712,0.553802],"update_to_weight":[0.003163,0.00299,0.003399],"momentum_alignment":[-0.060601,-0.312003,0.211278],"grad_sq_vs_v":[1.068809,0.499224,5.066975]},{"step":3275.0,"n":50,"loss":[5.153094,4.82728,5.540768],"grad_norm":[0.192675,0.146776,0.352676],"update_to_weight":[0.00301,0.002929,0.003098],"momentum_alignment":[-0.038309,-0.224736,0.19325],"grad_sq_vs_v":[0.645426,0.359169,2.076971]},{"step":3325.0,"n":50,"loss":[5.269415,4.877837,7.068506],"grad_norm":[0.266081,0.141926,0.509616],"update_to_weight":[0.003065,0.002932,0.003191],"momentum_alignment":[-0.058214,-0.558265,0.65066],"grad_sq_vs_v":[1.333324,0.333733,4.361769]},{"step":3375.0,"n":50,"loss":[5.168558,4.814557,6.283455],"grad_norm":[0.197713,0.156611,0.615595],"update_to_weight":[0.003011,0.002883,0.00317],"momentum_alignment":[-0.045957,-0.196185,0.14549],"grad_sq_vs_v":[0.764823,0.409777,6.325004]},{"step":3425.0,"n":50,"loss":[5.13784,4.713255,5.676269],"grad_norm":[0.209201,0.159165,0.614975],"update_to_weight":[0.003014,0.002924,0.003111],"momentum_alignment":[-0.044101,-0.308757,0.295163],"grad_sq_vs_v":[0.825913,0.425419,6.433733]},{"step":3475.0,"n":50,"loss":[5.14817,4.82168,5.627834],"grad_norm":[0.193728,0.146998,0.274706],"update_to_weight":[0.002976,0.002898,0.003088],"momentum_alignment":[-0.063375,-0.261363,0.089519],"grad_sq_vs_v":[0.657894,0.367976,1.297042]},{"step":3525.0,"n":50,"loss":[5.139994,4.884438,6.196887],"grad_norm":[0.201164,0.151881,0.32564],"update_to_weight":[0.002984,0.002911,0.003072],"momentum_alignment":[-0.054177,-0.288189,0.220353],"grad_sq_vs_v":[0.728307,0.402269,1.837001]},{"step":3575.0,"n":50,"loss":[5.133454,4.727241,5.568407],"grad_norm":[0.19376,0.148954,0.308503],"update_to_weight":[0.002916,0.002871,0.002956],"momentum_alignment":[-0.045033,-0.259541,0.24493],"grad_sq_vs_v":[0.674843,0.393565,1.677349]},{"step":3625.0,"n":50,"loss":[5.101476,4.603579,5.809157],"grad_norm":[0.203377,0.140332,0.394556],"update_to_weight":[0.002878,0.002785,0.002988],"momentum_alignment":[-0.059243,-0.30691,0.166567],"grad_sq_vs_v":[0.774231,0.35297,2.779789]},{"step":3675.0,"n":50,"loss":[5.120114,4.626158,7.273603],"grad_norm":[0.230532,0.13029,0.640398],"update_to_weight":[0.002903,0.002781,0.003094],"momentum_alignment":[-0.063395,-0.352331,0.105719],"grad_sq_vs_v":[1.094748,0.30563,7.421129]},{"step":3725.0,"n":50,"loss":[5.070882,4.75525,5.367962],"grad_norm":[0.197372,0.152556,0.2583],"update_to_weight":[0.002863,0.002776,0.00304],"momentum_alignment":[-0.049594,-0.186534,0.113778],"grad_sq_vs_v":[0.710813,0.418597,1.196443]},{"step":3775.0,"n":50,"loss":[5.030104,4.756403,5.401798],"grad_norm":[0.189433,0.142127,0.303946],"update_to_weight":[0.002769,0.00265,0.002865],"momentum_alignment":[-0.054001,-0.226236,0.177739],"grad_sq_vs_v":[0.678937,0.371236,1.701627]},{"step":3825.0,"n":50,"loss":[5.002461,4.647362,5.38418],"grad_norm":[0.198283,0.156188,0.321489],"update_to_weight":[0.002789,0.002708,0.002871],"momentum_alignment":[-0.053269,-0.263983,0.263079],"grad_sq_vs_v":[0.746838,0.450568,1.914029]},{"step":3875.0,"n":50,"loss":[5.000155,4.532038,5.296858],"grad_norm":[0.181532,0.142894,0.329238],"update_to_weight":[0.002749,0.002606,0.002834],"momentum_alignment":[-0.060411,-0.194491,0.082208],"grad_sq_vs_v":[0.637897,0.384743,2.034531]},{"step":3925.0,"n":50,"loss":[5.021713,4.606722,5.565761],"grad_norm":[0.202849,0.141127,0.367902],"update_to_weight":[0.002738,0.002594,0.002927],"momentum_alignment":[-0.058809,-0.264277,0.254809],"grad_sq_vs_v":[0.825615,0.382125,2.600465]},{"step":3975.0,"n":50,"loss":[4.966962,4.748059,5.290718],"grad_norm":[0.186535,0.153584,0.289974],"update_to_weight":[0.002688,0.002636,0.002759],"momentum_alignment":[-0.052508,-0.172242,0.057626],"grad_sq_vs_v":[0.683301,0.457074,1.626782]},{"step":4025.0,"n":50,"loss":[4.977681,4.668459,5.366562],"grad_norm":[0.201333,0.154178,0.344086],"update_to_weight":[0.002665,0.002571,0.002762],"momentum_alignment":[-0.068002,-0.261979,0.12273],"grad_sq_vs_v":[0.81383,0.468177,2.319571]},{"step":4075.0,"n":50,"loss":[5.041945,4.713543,6.008879],"grad_norm":[0.228464,0.163233,0.466206],"update_to_weight":[0.002715,0.002654,0.002801],"momentum_alignment":[-0.087167,-0.438241,0.142526],"grad_sq_vs_v":[1.081848,0.525511,4.291771]},{"step":4125.0,"n":50,"loss":[4.953283,4.445945,5.261684],"grad_norm":[0.221096,0.158195,0.408432],"update_to_weight":[0.00274,0.002596,0.002912],"momentum_alignment":[-0.056676,-0.252736,0.442034],"grad_sq_vs_v":[1.055538,0.491002,3.275342]},{"step":4175.0,"n":50,"loss":[5.060801,4.757628,5.651343],"grad_norm":[0.306946,0.186874,0.608588],"update_to_weight":[0.00281,0.002732,0.002918],"momentum_alignment":[-0.075153,-0.655535,0.504323],"grad_sq_vs_v":[1.973648,0.65538,7.159003]},{"step":4225.0,"n":50,"loss":[4.976306,4.711164,5.289132],"grad_norm":[0.189933,0.141786,0.332568],"update_to_weight":[0.002685,0.002576,0.002845],"momentum_alignment":[-0.049002,-0.266358,0.153939],"grad_sq_vs_v":[0.694575,0.37631,2.082833]},{"step":4275.0,"n":50,"loss":[4.9975,4.524602,5.581561],"grad_norm":[0.200525,0.149402,0.388969],"update_to_weight":[0.002633,0.00257,0.002705],"momentum_alignment":[-0.052241,-0.237908,0.220917],"grad_sq_vs_v":[0.797828,0.423447,2.874371]},{"step":4325.0,"n":50,"loss":[4.900979,4.51192,5.189763],"grad_norm":[0.200469,0.154428,0.339679],"update_to_weight":[0.002545,0.002452,0.00262],"momentum_alignment":[-0.057526,-0.273279,0.188258],"grad_sq_vs_v":[0.79545,0.456821,2.228636]},{"step":4375.0,"n":50,"loss":[4.950018,4.38154,5.41241],"grad_norm":[0.217987,0.151234,0.454689],"update_to_weight":[0.00254,0.002451,0.002674],"momentum_alignment":[-0.067157,-0.358094,0.198833],"grad_sq_vs_v":[0.977909,0.441801,4.002327]},{"step":4425.0,"n":50,"loss":[4.954538,4.484543,5.767785],"grad_norm":[0.194897,0.143097,0.390061],"update_to_weight":[0.002533,0.002441,0.002607],"momentum_alignment":[-0.059788,-0.300142,0.188065],"grad_sq_vs_v":[0.765145,0.400464,2.983623]},{"step":4475.0,"n":50,"loss":[4.89162,4.373288,5.333768],"grad_norm":[0.182414,0.143699,0.276083],"update_to_weight":[0.002512,0.002426,0.002602],"momentum_alignment":[-0.057116,-0.219781,0.115074],"grad_sq_vs_v":[0.668978,0.408278,1.509204]},{"step":4525.0,"n":50,"loss":[4.993353,4.567423,5.796696],"grad_norm":[0.20905,0.156506,0.343706],"update_to_weight":[0.00255,0.002487,0.002624],"momentum_alignment":[-0.057982,-0.334595,0.16329],"grad_sq_vs_v":[0.90722,0.48943,2.366863]},{"step":4575.0,"n":50,"loss":[4.946457,4.604953,5.395453],"grad_norm":[0.209904,0.148129,0.783076],"update_to_weight":[0.002565,0.002479,0.002714],"momentum_alignment":[-0.079502,-0.344052,0.10978],"grad_sq_vs_v":[1.038955,0.439756,12.373019]},{"step":4625.0,"n":50,"loss":[4.896655,4.544959,5.227274],"grad_norm":[0.200267,0.154768,0.357799],"update_to_weight":[0.002522,0.002455,0.002575],"momentum_alignment":[-0.053684,-0.323118,0.151253],"grad_sq_vs_v":[0.833899,0.480269,2.558247]},{"step":4675.0,"n":50,"loss":[4.859454,4.630769,5.094862],"grad_norm":[0.176324,0.1421,0.254078],"update_to_weight":[0.002473,0.002424,0.002547],"momentum_alignment":[-0.053422,-0.242673,0.099588],"grad_sq_vs_v":[0.640805,0.412265,1.304528]},{"step":4725.0,"n":50,"loss":[4.895733,4.302623,5.485508],"grad_norm":[0.197633,0.150532,0.3729],"update_to_weight":[0.002473,0.002373,0.002693],"momentum_alignment":[-0.050967,-0.214498,0.137104],"grad_sq_vs_v":[0.842139,0.466567,2.880591]},{"step":4775.0,"n":50,"loss":[4.959455,4.371698,5.98332],"grad_norm":[0.245267,0.158888,0.449429],"update_to_weight":[0.002546,0.002434,0.002661],"momentum_alignment":[-0.06382,-0.446011,0.233627],"grad_sq_vs_v":[1.307477,0.520199,4.164149]},{"step":4825.0,"n":50,"loss":[4.888673,4.625664,5.181229],"grad_norm":[0.195893,0.150524,0.317098],"update_to_weight":[0.002461,0.002395,0.002563],"momentum_alignment":[-0.051498,-0.230067,0.187949],"grad_sq_vs_v":[0.803104,0.46495,2.047268]},{"step":4875.0,"n":50,"loss":[4.865039,4.236963,5.205848],"grad_norm":[0.235561,0.16289,0.546823],"update_to_weight":[0.002481,0.002415,0.002546],"momentum_alignment":[-0.071998,-0.591334,0.159689],"grad_sq_vs_v":[1.229523,0.543352,6.120675]},{"step":4925.0,"n":50,"loss":[4.868623,4.553033,5.420485],"grad_norm":[0.20679,0.145617,0.37923],"update_to_weight":[0.002445,0.002384,0.002536],"momentum_alignment":[-0.074355,-0.294951,0.145961],"grad_sq_vs_v":[0.90394,0.432168,2.930332]},{"step":4975.0,"n":50,"loss":[4.937618,4.423785,5.757197],"grad_norm":[0.220765,0.148597,0.378673],"update_to_weight":[0.002446,0.002382,0.002505],"momentum_alignment":[-0.073041,-0.406053,0.280571],"grad_sq_vs_v":[1.059421,0.449132,2.9158]},{"step":5025.0,"n":50,"loss":[4.892376,4.593754,5.15388],"grad_norm":[0.252972,0.162097,0.584394],"update_to_weight":[0.002453,0.002372,0.002555],"momentum_alignment":[-0.077318,-0.490456,0.48042],"grad_sq_vs_v":[1.418906,0.534864,6.957859]},{"step":5075.0,"n":50,"loss":[4.844113,4.44388,5.233135],"grad_norm":[0.181565,0.15127,0.288345],"update_to_weight":[0.002376,0.002301,0.002459],"momentum_alignment":[-0.05238,-0.217169,0.132988],"grad_sq_vs_v":[0.673037,0.456302,1.661944]},{"step":5125.0,"n":50,"loss":[4.865498,4.456107,5.188124],"grad_norm":[0.178702,0.147407,0.2772],"update_to_weight":[0.002372,0.002306,0.002432],"momentum_alignment":[-0.047858,-0.197755,0.113624],"grad_sq_vs_v":[0.664526,0.445735,1.560082]},{"step":5175.0,"n":50,"loss":[4.854351,4.348605,5.302234],"grad_norm":[0.178167,0.142699,0.264969],"update_to_weight":[0.002347,0.002261,0.002422],"momentum_alignment":[-0.055897,-0.240039,0.094172],"grad_sq_vs_v":[0.674243,0.422852,1.456758]},{"step":5225.0,"n":50,"loss":[4.829449,4.549436,5.636083],"grad_norm":[0.197471,0.145507,0.384432],"update_to_weight":[0.002314,0.002272,0.002375],"momentum_alignment":[-0.072942,-0.219345,0.195726],"grad_sq_vs_v":[0.858809,0.446459,3.118132]},{"step":5275.0,"n":50,"loss":[4.837265,4.49633,5.222914],"grad_norm":[0.193714,0.138604,0.305069],"update_to_weight":[0.002348,0.002276,0.002415],"momentum_alignment":[-0.056117,-0.336992,0.206635],"grad_sq_vs_v":[0.819896,0.406575,1.970808]},{"step":5325.0,"n":50,"loss":[4.809762,4.322826,5.321988],"grad_norm":[0.205574,0.154358,0.353243],"update_to_weight":[0.002355,0.002316,0.002413],"momentum_alignment":[-0.066636,-0.202177,0.138878],"grad_sq_vs_v":[0.930244,0.508263,2.668201]},{"step":5375.0,"n":50,"loss":[4.808383,4.373487,5.32796],"grad_norm":[0.191856,0.148531,0.36903],"update_to_weight":[0.002315,0.002251,0.002387],"momentum_alignment":[-0.063529,-0.426823,0.175132],"grad_sq_vs_v":[0.820437,0.474663,2.90978]},{"step":5425.0,"n":50,"loss":[4.791794,4.448805,5.318445],"grad_norm":[0.206778,0.161575,0.290905],"update_to_weight":[0.00229,0.0022,0.002358],"momentum_alignment":[-0.060965,-0.32451,0.169794],"grad_sq_vs_v":[0.945348,0.562727,1.826964]},{"step":5475.0,"n":50,"loss":[4.853388,4.050967,5.408912],"grad_norm":[0.259629,0.160856,0.545224],"update_to_weight":[0.002344,0.002253,0.00246],"momentum_alignment":[-0.047603,-0.409889,0.297651],"grad_sq_vs_v":[1.539296,0.544442,6.388783]},{"step":5525.0,"n":50,"loss":[4.818081,4.420193,5.151187],"grad_norm":[0.190556,0.137488,0.258529],"update_to_weight":[0.002297,0.002206,0.002381],"momentum_alignment":[-0.044327,-0.220042,0.103447],"grad_sq_vs_v":[0.779139,0.400757,1.406645]},{"step":5575.0,"n":50,"loss":[4.832098,4.468797,5.263612],"grad_norm":[0.21805,0.157927,0.301778],"update_to_weight":[0.002272,0.00219,0.002334],"momentum_alignment":[-0.078422,-0.471259,0.212632],"grad_sq_vs_v":[1.038718,0.528945,1.936294]},{"step":5625.0,"n":50,"loss":[4.80113,4.462488,5.23433],"grad_norm":[0.19601,0.148312,0.299293],"update_to_weight":[0.002258,0.002208,0.002318],"momentum_alignment":[-0.06801,-0.342888,0.24828],"grad_sq_vs_v":[0.844411,0.469925,1.905768]},{"step":5675.0,"n":50,"loss":[4.785019,4.509716,5.174982],"grad_norm":[0.192793,0.138094,0.352269],"update_to_weight":[0.002244,0.002142,0.002364],"momentum_alignment":[-0.05979,-0.466154,0.201757],"grad_sq_vs_v":[0.861746,0.412236,2.689352]},{"step":5725.0,"n":50,"loss":[4.809909,4.583539,5.350526],"grad_norm":[0.190341,0.146456,0.31579],"update_to_weight":[0.002295,0.00225,0.002404],"momentum_alignment":[-0.056906,-0.272063,0.193697],"grad_sq_vs_v":[0.805392,0.464649,2.149823]},{"step":5775.0,"n":50,"loss":[4.743918,4.276618,5.280102],"grad_norm":[0.187567,0.145545,0.261648],"update_to_weight":[0.002213,0.002159,0.002278],"momentum_alignment":[-0.062994,-0.231466,0.106377],"grad_sq_vs_v":[0.786855,0.463549,1.506499]},{"step":5825.0,"n":50,"loss":[4.757593,4.570076,5.288153],"grad_norm":[0.181046,0.148735,0.257704],"update_to_weight":[0.002199,0.002157,0.002254],"momentum_alignment":[-0.063334,-0.237625,0.115939],"grad_sq_vs_v":[0.738579,0.487574,1.467343]},{"step":5875.0,"n":50,"loss":[4.776496,4.253858,5.446859],"grad_norm":[0.204936,0.152734,0.329705],"update_to_weight":[0.002259,0.00216,0.002383],"momentum_alignment":[-0.060927,-0.309668,0.123951],"grad_sq_vs_v":[0.977557,0.520581,2.422477]},{"step":5925.0,"n":50,"loss":[4.768887,4.426899,5.178755],"grad_norm":[0.187567,0.148125,0.314931],"update_to_weight":[0.002216,0.002158,0.002269],"momentum_alignment":[-0.059449,-0.248161,0.1117],"grad_sq_vs_v":[0.806524,0.491857,2.226105]},{"step":5975.0,"n":50,"loss":[4.853322,4.532014,5.511071],"grad_norm":[0.226265,0.14502,0.496355],"update_to_weight":[0.002307,0.002159,0.00243],"momentum_alignment":[-0.067136,-0.40901,0.280108],"grad_sq_vs_v":[1.254386,0.471797,5.536474]}]},"config_points":{"0":{"lr_multiplier":[[0,1.0]],"beta1":[[0,0.95]],"beta2":[[0,0.999]]}},"reviews":[]}</script>
+<script>
+const RUN = JSON.parse(document.getElementById("run-data").textContent);
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, text) => {
+  const node = document.createElementNS(NS, tag);
+  for (const k in attrs) node.setAttribute(k, attrs[k]);
+  if (text != null) node.textContent = text;
+  return node;
+};
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmt = n => n.toLocaleString();
+
+// ---------------------------------------------------------------- header
+document.getElementById("run-title").textContent = RUN.run_id;
+{
+  const c = RUN.config, a = RUN.accounting, f = RUN.fuel, s = RUN.score;
+  const chips = [
+    ["steps", fmt(RUN.total_steps)],
+    ["batch", fmt(c.total_batch_size || 0) + " tok"],
+    ["schedule", c.schedule || "?"],
+    ["base LR ×", c.base_lr_scale],
+    ["β1/β2 起始", `${c.beta1} / ${c.beta2}`],
+    ["K", c.review_every],
+    ["reviews", RUN.reviews.length],
+    ["分支", RUN.branches.length],
+    ["移动", a.move_count ?? "—"],
+    ["燃料已花", f.spent_steps != null ? `${fmt(f.spent_steps)} 步` : "—"],
+    ["燃料剩余", f.remaining_steps != null && f.total_steps
+        ? `${fmt(f.remaining_steps)} 步 (${Math.round(100 * f.remaining_steps / f.total_steps)}%)` : "—"],
+    [s ? `score 末${s.score_window_steps}步` : "score", s ? s.final_train_loss_mean.toFixed(4) : "未完成"],
+  ];
+  document.getElementById("run-chips").innerHTML =
+    chips.map(([k, v]) => `${k} <b>${v}</b>`).join("");
+}
+
+// ---------------------------------------------------------------- tree
+const laneOf = new Map(RUN.branches.map((b, i) => [b.branch, i]));
+const byBranch = new Map(RUN.branches.map(b => [b.branch, b]));
+const reviewById = new Map(RUN.reviews.map(r => [r.review_id, r]));
+const moveOf = r => ((r.action && r.action.result && r.action.result.move) || null);
+// Half-lives are the agent's way of typing a beta; the page shows betas only.
+const HIDDEN_CONFIG_KEYS = new Set(["beta1_half_life", "beta2_half_life"]);
+let selectedId = null;
+
+function drawTree() {
+  const svg = document.getElementById("tree");
+  svg.innerHTML = "";
+  const lanes = RUN.branches.length;
+  const M = { top: 14, right: 26, bottom: 30, left: 46 };
+  const W = Math.max(760, 150 + RUN.total_steps * 0.16);
+  const laneH = 36;
+  const H = M.top + M.bottom + Math.max(1, lanes - 1) * laneH;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("preserveAspectRatio", "xMinYMin meet");
+  svg.style.width = "100%";
+  svg.style.minWidth = Math.min(W, 720) + "px";
+  svg.style.height = "auto";
+
+  const x = step => M.left + (step / Math.max(RUN.total_steps, 1)) * (W - M.left - M.right);
+  const y = branch => M.top + laneOf.get(branch) * laneH;
+
+  for (const tick of ticks(0, RUN.total_steps, 6)) {
+    svg.appendChild(el("line", { x1: x(tick), x2: x(tick), y1: M.top - 6, y2: H - M.bottom + 6,
+                                 stroke: css("--grid"), "stroke-width": 1 }));
+    svg.appendChild(el("text", { x: x(tick), y: H - M.bottom + 20, "text-anchor": "middle",
+                                 class: "lane-label", fill: css("--ink3") }, fmt(Math.round(tick))));
+  }
+
+  for (const b of RUN.branches) {
+    const live = b.on_path;
+    const colour = live ? css("--change") : css("--dead");
+    const x0 = x(b.fork_step);
+    const x1 = x(b.last_step ?? b.fork_step);
+    svg.appendChild(el("line", { x1: x0, x2: x1, y1: y(b.branch), y2: y(b.branch),
+                                 stroke: colour, "stroke-width": live ? 3.2 : 1.6,
+                                 "stroke-linecap": "round" }));
+    svg.appendChild(el("text", { x: M.left - 10, y: y(b.branch) + 4, "text-anchor": "end",
+                                 class: "lane-label", fill: live ? css("--ink") : css("--ink3") },
+                       "b" + b.branch));
+    if (b.parent !== null) {                      // fork connector, bowed clear of crossed lanes
+      const span = Math.abs(laneOf.get(b.branch) - laneOf.get(b.parent));
+      const cx = x0 + 8 + span * 5;
+      svg.appendChild(el("path", {
+        d: `M ${x0} ${y(b.parent)} Q ${cx} ${(y(b.parent) + y(b.branch)) / 2} ${x0} ${y(b.branch)}`,
+        fill: "none", stroke: colour, "stroke-width": 1.5,
+      }));
+    }
+  }
+
+  for (const r of RUN.reviews) {
+    const mv = moveOf(r);                         // jump to the checkpoint it restored
+    if (mv) {
+      const target = reviewById.get(mv.target_review);
+      if (target) {
+        svg.appendChild(el("path", {
+          d: `M ${x(r.step)} ${y(r.branch)} Q ${(x(r.step) + x(target.step)) / 2} ${y(r.branch) - 12} ${x(target.step)} ${y(target.branch)}`,
+          fill: "none", stroke: css("--move"), "stroke-width": 1.4,
+          "stroke-dasharray": "4 3",
+        }));
+      }
+    }
+  }
+
+  // A changed config belongs to the branch that RUNS it, so the label sits where
+  // it first takes effect: the new branch's fork point after a move, otherwise
+  // this review's own position. Sides alternate to avoid collisions.
+  const lastLabel = new Map();
+  for (const r of RUN.reviews) {
+    if (!r.changes || !r.changes.length) continue;
+    const mv = moveOf(r);
+    const lane = mv ? mv.new_branch : r.branch;
+    const at = mv ? mv.landed_step : r.step;
+    if (!laneOf.has(lane)) continue;
+    const prev = lastLabel.get(lane) || { x: -1e9, side: -1 };
+    const side = (at - prev.x) < RUN.total_steps * 0.11 ? -prev.side : 1;
+    lastLabel.set(lane, { x: at, side });
+    svg.appendChild(el("text", {
+      x: x(at) + 12, y: y(lane) + (side > 0 ? -10 : 16),
+      class: "node-label", fill: css("--ink2"),
+    }, r.changes.join(" ")));
+  }
+
+  for (const r of RUN.reviews) {
+    const colour = css("--" + r.kind);
+    const g = el("g", { class: "node", tabindex: "0", role: "button" });
+    g.appendChild(el("circle", { class: "halo", cx: x(r.step), cy: y(r.branch), r: 11,
+                                 fill: colour, opacity: r.review_id === selectedId ? .3 : 0 }));
+    g.appendChild(el("circle", {
+      cx: x(r.step), cy: y(r.branch), r: r.kind === "noop" ? 4 : 5.5,
+      fill: r.kind === "noop" ? css("--panel") : colour,
+      stroke: r.kind === "noop" ? colour : css("--surface"), "stroke-width": 1.8,
+    }));
+    g.appendChild(el("title", {}, `${r.review_id} · b${r.branch}@${r.step}`));
+    const pick = () => select(r.review_id);
+    g.addEventListener("click", pick);
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+    svg.appendChild(g);
+  }
+}
+
+function ticks(lo, hi, count) {
+  const raw = (hi - lo) / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw) || mag * 10;
+  const out = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) {
+    out.push(Math.abs(v) < 1e-9 ? 0 : v);        // keep fractions: y axes need them
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- curves
+const METRICS = [
+  { key: "loss", label: "train loss", kind: "window" },
+  { key: "grad_norm", label: "grad norm", kind: "window" },
+  { key: "update_to_weight", label: "update/weight", kind: "window" },
+  { key: "momentum_alignment", label: "momentum align", kind: "window" },
+  { key: "grad_sq_vs_v", label: "g² vs v̂", kind: "window" },
+  { key: "lr_multiplier", label: "lr ×", kind: "config" },
+  { key: "beta1", label: "β1", kind: "config" },
+  { key: "beta2", label: "β2", kind: "config" },
+];
+let metric = METRICS[0];
+let showPath = true;                              // the stitched lineage, on by default
+let shownBranches = new Set();                    // individual branches, for comparison
+
+// The active path is one continuous curve cut into several branch segments by
+// the forks; each parent contributes only the steps below where its child forked
+// off. Stitch the segments before plotting so the line stays unbroken.
+function pathSeries() {
+  const parts = [];
+  for (const info of RUN.branches) {
+    if (!info.on_path) continue;
+    const until = info.path_until;
+    for (const p of seriesFor(info.branch)) {
+      if (until === null || until === undefined || p[0] <= until) parts.push(p);
+    }
+  }
+  return parts.sort((a, b) => a[0] - b[0]);
+}
+
+function seriesFor(branch) {
+  if (metric.kind === "config") {
+    const pts = ((RUN.config_points[branch] || {})[metric.key]) || [];
+    const info = byBranch.get(branch);
+    const out = [];
+    pts.forEach(([s, v], i) => {                  // step function -> staircase
+      const next = i + 1 < pts.length ? pts[i + 1][0] : (info.last_step ?? s) + 1;
+      out.push([s, v], [next, v]);
+    });
+    return out;
+  }
+  return (RUN.windows[branch] || []).filter(w => w[metric.key])
+                                    .map(w => [w.step, w[metric.key][0]]);
+}
+
+function drawCurve() {
+  const svg = document.getElementById("curve");
+  svg.innerHTML = "";
+  const M = { top: 12, right: 16, bottom: 30, left: 60 };
+  const W = Math.max(760, 150 + RUN.total_steps * 0.16), H = 300;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("preserveAspectRatio", "xMinYMin meet");
+  svg.style.width = "100%";
+  svg.style.minWidth = Math.min(W, 720) + "px";
+  svg.style.height = "auto";
+
+  const shown = [...shownBranches];
+  const layers = [];
+  if (showPath) layers.push({ key: "path", label: "active path", pts: pathSeries(), live: true });
+  for (const b of shown) {
+    layers.push({ key: "b" + b, label: "b" + b, pts: seriesFor(b), live: byBranch.get(b).on_path });
+  }
+  const all = layers.flatMap(l => l.pts);
+  if (!all.length) {
+    svg.appendChild(el("text", { x: W / 2, y: H / 2, "text-anchor": "middle", fill: css("--ink3") },
+                       "该指标在所选分支上没有数据"));
+    return;
+  }
+  let lo = Math.min(...all.map(p => p[1])), hi = Math.max(...all.map(p => p[1]));
+  if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
+  const pad = (hi - lo) * 0.08;
+  lo -= pad; hi += pad;
+
+  const x = s => M.left + (s / Math.max(RUN.total_steps, 1)) * (W - M.left - M.right);
+  const y = v => M.top + (1 - (v - lo) / (hi - lo)) * (H - M.top - M.bottom);
+
+  for (const v of ticks(lo, hi, 5)) {
+    svg.appendChild(el("line", { x1: M.left, x2: W - M.right, y1: y(v), y2: y(v),
+                                 stroke: css("--grid"), "stroke-width": 1 }));
+    svg.appendChild(el("text", { x: M.left - 8, y: y(v) + 4, "text-anchor": "end",
+                                 class: "lane-label", fill: css("--ink3") }, formatTick(v, hi - lo)));
+  }
+  for (const t of ticks(0, RUN.total_steps, 6)) {
+    svg.appendChild(el("text", { x: x(t), y: H - 10, "text-anchor": "middle",
+                                 class: "lane-label", fill: css("--ink3") }, fmt(Math.round(t))));
+  }
+
+  for (const layer of layers) {
+    const pts = layer.pts;
+    if (!pts.length) continue;
+    const isPath = layer.key === "path";
+    const colour = isPath ? css("--change") : layer.live ? css("--accent") : css("--dead");
+    const live = isPath;
+    svg.appendChild(el("polyline", {
+      points: pts.map(p => `${x(p[0])},${y(p[1])}`).join(" "),
+      fill: "none", stroke: colour, "stroke-width": live ? 2 : 1.4,
+      "stroke-dasharray": live ? "none" : "5 3",
+      "stroke-linejoin": "round",
+    }));
+    const last = pts[pts.length - 1];
+    svg.appendChild(el("text", { x: x(last[0]) + 5, y: y(last[1]) + 4, class: "lane-label", fill: colour },
+                       layer.label));
+  }
+
+  const sel = selectedId && reviewById.get(selectedId);
+  if (sel) {
+    svg.appendChild(el("line", { x1: x(sel.step), x2: x(sel.step), y1: M.top, y2: H - M.bottom,
+                                 stroke: css("--move"), "stroke-width": 1, "stroke-dasharray": "3 3" }));
+  }
+  document.getElementById("curve-note").textContent =
+    metric.kind === "window"
+      ? `窗口宽度 ${RUN.bin_size} 步；窗口在各分支上对齐，同一窗口吃的是同一批数据`
+      : "超参是阶梯函数，只画变化点";
+}
+
+function formatTick(v, span) {
+  const digits = span > 5 ? 1 : span > 0.5 ? 2 : span > 0.05 ? 3 : 4;
+  return v.toFixed(digits);
+}
+
+// ---------------------------------------------------------------- detail
+function select(id, pushHash = true) {
+  selectedId = id;
+  // deep link: viewer.html#R0007 opens straight at that review
+  if (pushHash && id) history.replaceState(null, "", "#" + id);
+  drawTree();
+  drawCurve();
+  renderDetail();
+  document.getElementById("detail").scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const pretty = v => typeof v === "string" ? v : JSON.stringify(v, null, 2);
+
+function block(text, limit = 700) {
+  const full = pretty(text);
+  if (full.length <= limit) return `<pre>${esc(full)}</pre>`;
+  return `<pre>${esc(full.slice(0, limit))}…</pre>
+    <details><summary>展开全部 ${fmt(full.length)} 字符</summary><pre>${esc(full)}</pre></details>`;
+}
+
+function renderDetail() {
+  const host = document.getElementById("detail");
+  const r = selectedId && reviewById.get(selectedId);
+  if (!r) {
+    host.innerHTML = `<div class="empty">在左侧操作树上点一个节点${RUN.reviews.length ? "" : "（这条 run 没有 agent review）"}</div>`;
+    return;
+  }
+  const kindLabel = { move: "移动", change: "改参", noop: "no-op" }[r.kind];
+  const call = (r.action || {}).call, result = (r.action || {}).result;
+  const summary = r.final_summary || {};
+  const before = r.config_before || {}, after = r.config_after || {};
+  const shownKeys = Object.keys(after).filter(k => !HIDDEN_CONFIG_KEYS.has(k));
+  const changed = shownKeys.filter(k => before[k] !== after[k]);
+
+  const parts = [];
+  parts.push(`<h3>${r.review_id} <span class="pill ${r.kind}">${kindLabel}</span></h3>`);
+  parts.push(`<div class="sub mono">branch ${r.branch} · step ${fmt(r.step)} · ${r.rounds.length} 轮请求 · ${
+    r.wall_clock_s != null ? r.wall_clock_s.toFixed(1) + "s" : "?"} · ${r.end_reason || ""}</div>`);
+
+  parts.push('<dl class="kv">');
+  parts.push(`<dt>配置</dt><dd class="mono">${
+    changed.length
+      ? changed.map(k => `${k}: ${before[k]} → <b>${after[k]}</b>`).join("<br>")
+      : shownKeys.map(k => `${k}: ${after[k]}`).join(" · ") || "—"}</dd>`);
+  if (result && result.move) {
+    const mv = result.move;
+    // signed by protocol: positive = fuel charged, negative = refund (forward jump)
+    const fuel = mv.fuel_cost_steps >= 0
+      ? `扣 ${fmt(mv.fuel_cost_steps)} 步` : `退 ${fmt(-mv.fuel_cost_steps)} 步`;
+    parts.push(`<dt>移动</dt><dd class="mono">→ ${mv.target_review} (step ${fmt(mv.landed_step)}) · 开 branch ${
+      mv.new_branch} · 燃料 ${fuel}${result.fuel_remaining_steps != null
+        ? ` · 余 ${fmt(result.fuel_remaining_steps)} 步` : ""}</dd>`);
+  }
+  parts.push("</dl>");
+
+  if (call) parts.push(`<details open><summary>apply_action 调用与结果</summary>
+    ${block(call, 400)}${block(result, 900)}</details>`);
+
+  const fields = [
+    ["one_sentence_summary", "一句话"], ["run_summary", "全程叙事"],
+    ["previous_action_review", "上轮预期复盘"], ["current_observation", "本轮观察"],
+    ["action_reason", "决策理由"], ["remaining_budget_plan", "剩余预算计划"],
+    ["next_expectation", "下轮预期"],
+  ].filter(([k]) => summary[k]);
+  if (fields.length) {
+    parts.push(`<details open><summary>final summary</summary>` +
+      fields.map(([k, label]) =>
+        `<div class="summary-field"><div class="label">${label}</div>${esc(summary[k])}</div>`).join("") +
+      `</details>`);
+  }
+
+  parts.push(`<details><summary>开场 state packet</summary>${block(r.state_packet, 0)}</details>`);
+
+  r.rounds.forEach((rd, i) => {
+    const calls = ((rd.response || {}).tool_calls) || [];
+    const names = calls.map(c => c.function.name);
+    const tally = names.reduce((m, n) => (m[n] = (m[n] || 0) + 1, m), {});
+    const label = names.length
+      ? Object.entries(tally).map(([n, c]) => c > 1 ? `${n}×${c}` : n).join(", ")
+      : "无工具调用（收尾）";
+    parts.push(`<details><summary>轮 ${i + 1} <span class="round-tools">${esc(rd.request_id || "")} · ${esc(label)}</span></summary>`);
+    if ((rd.response || {}).content) {
+      parts.push(`<div class="summary-field"><div class="label">模型文本</div>${block((rd.response).content)}</div>`);
+    }
+    calls.forEach((c, j) => {
+      const res = (rd.tool_results || [])[j];
+      parts.push(`<div class="summary-field"><div class="label"><span class="call-name">${esc(c.function.name)}</span> 参数</div>${
+        block(c.function.arguments, 300)}<div class="label" style="margin-top:6px">返回</div>${block(res, 700)}</div>`);
+    });
+    parts.push("</details>");
+  });
+
+  host.innerHTML = parts.join("");
+}
+
+// ---------------------------------------------------------------- controls
+{
+  const host = document.getElementById("metric-buttons");
+  METRICS.forEach(m => {
+    const b = document.createElement("button");
+    b.textContent = m.label;
+    b.setAttribute("aria-pressed", m === metric);
+    b.onclick = () => {
+      metric = m;
+      [...host.children].forEach(c => c.setAttribute("aria-pressed", c === b));
+      drawCurve();
+    };
+    host.appendChild(b);
+  });
+}
+{
+  const host = document.getElementById("branch-buttons");
+  const pathBtn = document.createElement("button");
+  pathBtn.textContent = "active path";
+  pathBtn.title = "最终 lineage，沿 fork 点拼接成一条连续曲线";
+  pathBtn.setAttribute("aria-pressed", showPath);
+  pathBtn.onclick = () => {
+    showPath = !showPath;
+    pathBtn.setAttribute("aria-pressed", showPath);
+    drawCurve();
+  };
+  host.appendChild(pathBtn);
+  host.appendChild(Object.assign(document.createElement("span"),
+    { className: "hint", textContent: "叠加单支：", style: "align-self:center;margin:0 2px 0 10px" }));
+  RUN.branches.forEach(info => {
+    const b = document.createElement("button");
+    b.textContent = "b" + info.branch + (info.on_path ? "" : " ·");
+    b.title = info.on_path ? "最终 lineage" : "已放弃的分支";
+    b.setAttribute("aria-pressed", shownBranches.has(info.branch));
+    b.onclick = () => {
+      shownBranches.has(info.branch) ? shownBranches.delete(info.branch) : shownBranches.add(info.branch);
+      b.setAttribute("aria-pressed", shownBranches.has(info.branch));
+      drawCurve();
+    };
+    host.appendChild(b);
+  });
+}
+
+const fromHash = location.hash.slice(1);
+if (fromHash && reviewById.has(fromHash)) selectedId = fromHash;
+drawTree();
+drawCurve();
+renderDetail();
+addEventListener("hashchange", () => {
+  const id = location.hash.slice(1);
+  if (reviewById.has(id)) select(id, false);
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { drawTree(); drawCurve(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic Optimizer · view board</title>
+<style>
+  :root {
+    --surface: #fcfcfb; --panel: #ffffff; --stripe: #f4f3ef;
+    --hairline: #e4e3df; --ink: #0b0b0b; --ink2: #52514e; --ink3: #85837c;
+    --accent: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface: #1a1a19; --panel: #232322; --stripe: #212120;
+      --hairline: #35352f; --ink: #ffffff; --ink2: #c3c2b7; --ink3: #8d8c83;
+      --accent: #3987e5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--surface); color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1080px; margin: 0 auto; padding: 40px 22px 80px; }
+  h1 { margin: 0 0 28px; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+  figure { margin: 0 0 36px; }
+  img { display: block; width: 100%; height: auto; border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  caption {
+    text-align: left; font-size: 13px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--ink3); padding-bottom: 10px;
+  }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--hairline); }
+  th { font-size: 12px; font-weight: 600; color: var(--ink3); text-transform: uppercase; letter-spacing: .04em; }
+  td.num { text-align: right; font-family: ui-monospace, Menlo, monospace; }
+  tbody tr:hover { background: var(--stripe); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .run { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Agentic Optimizer · view board</h1>
+  <figure>
+    <picture>
+      <source srcset="v27_train_loss_dark.png" media="(prefers-color-scheme: dark)">
+      <img src="v27_train_loss.png" alt="loss compare">
+    </picture>
+  </figure>
+  <table>
+    <caption>runs</caption>
+    <thead><tr><th>run</th><th>arm</th><th class="num">末 100 步 train loss</th><th></th></tr></thead>
+    <tbody>
+      <tr><td class="run">v27_wsd_poor_d4_20260826-2154</td><td>WSD</td><td class="num">4.5787</td><td><a href="runs/v27_wsd_poor_d4_20260826-2154.html">打开 →</a></td></tr>
+      <tr><td class="run">v27_cosine_poor_d4_20260827-0010</td><td>Cosine</td><td class="num">4.6169</td><td><a href="runs/v27_cosine_poor_d4_20260827-0010.html">打开 →</a></td></tr>
+      <tr><td class="run">v27_agentic_poor_d4_20260827-0413</td><td>Agentic</td><td class="num">4.6434</td><td><a href="runs/v27_agentic_poor_d4_20260827-0413.html">打开 →</a></td></tr>
+      <tr><td class="run">v27_const_poor_d4_20260827-0216</td><td>Constant LR</td><td class="num">4.8111</td><td><a href="runs/v27_const_poor_d4_20260827-0216.html">打开 →</a></td></tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>
