@@ -9,7 +9,7 @@
     --surface: #fcfcfb; --panel: #ffffff; --stripe: #f4f3ef;
     --hairline: #e4e3df; --grid: #eeede9;
     --ink: #0b0b0b; --ink2: #52514e; --ink3: #85837c;
-    --move: #eb6834; --change: #2a78d6; --noop: #a9a7a0;
+    --move: #eb6834; --change: #2a78d6; --live: #2a78d6;
     --dead: #a9a7a0; --accent: #2a78d6;
   }
   @media (prefers-color-scheme: dark) {
@@ -17,7 +17,7 @@
       --surface: #1a1a19; --panel: #232322; --stripe: #212120;
       --hairline: #35352f; --grid: #2b2b27;
       --ink: #ffffff; --ink2: #c3c2b7; --ink3: #8d8c83;
-      --move: #d95926; --change: #3987e5; --noop: #6f6d66;
+      --move: #d95926; --change: #3987e5; --live: #3987e5;
       --dead: #6f6d66; --accent: #3987e5;
     }
   }
@@ -46,6 +46,21 @@
   .scroll-x { overflow-x: auto; }
   svg { display: block; }
   .hint { font-size: 12px; color: var(--ink3); }
+
+  /* Tree legend: the two channels the tree encodes - colour for path membership,
+     shape for what the agent did at that review. */
+  .tree-legend {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+    font-size: 12px; color: var(--ink2); margin: 0 0 12px;
+  }
+  .tree-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .tree-legend .grp { color: var(--ink3); font-weight: 600; }
+  .tree-legend .grp:not(:first-child) { margin-left: 6px; }
+  .tree-legend i { display: inline-block; width: 18px; }
+  .tree-legend i.lane { height: 0; }
+  .tree-legend i.lane.live { border-top: 3.2px solid var(--live); }
+  .tree-legend i.lane.dead { border-top: 1.6px solid var(--dead); }
+  .tree-legend i.arc { height: 0; border-top: 1.4px dashed var(--move); }
 
   .controls { display: flex; flex-wrap: wrap; gap: 6px; }
   button {
@@ -115,6 +130,16 @@
         <h2>操作树</h2>
         <span class="hint">点节点查看该次 review 的完整记录</span>
       </div>
+      <div class="tree-legend">
+        <span class="grp">颜色 = 走没走</span>
+        <span><i class="lane live"></i>最终路径</span>
+        <span><i class="lane dead"></i>已放弃</span>
+        <span class="grp">形状 = 做了什么</span>
+        <span><svg width="13" height="13" viewBox="0 0 13 13"><circle cx="6.5" cy="6.5" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>no-op</span>
+        <span><svg width="13" height="13" viewBox="0 0 13 13"><circle cx="6.5" cy="6.5" r="5" fill="currentColor"/></svg>改参</span>
+        <span><svg width="13" height="13" viewBox="0 0 13 13"><path d="M6.5 1 L12 6.5 L6.5 12 L1 6.5 Z" fill="currentColor"/></svg>移动</span>
+        <span><i class="arc"></i>移动去向</span>
+      </div>
       <div class="scroll-x"><svg id="tree"></svg></div>
     </section>
     <section>
@@ -171,6 +196,14 @@ const laneOf = new Map(RUN.branches.map((b, i) => [b.branch, i]));
 const byBranch = new Map(RUN.branches.map(b => [b.branch, b]));
 const reviewById = new Map(RUN.reviews.map(r => [r.review_id, r]));
 const moveOf = r => ((r.action && r.action.result && r.action.result.move) || null);
+// A review lies on the final lineage only if its branch does AND it sits at or
+// before the step where that branch's child forked off - the same cut the lanes
+// and pathSeries() use.
+function onFinalPath(r) {
+  const info = byBranch.get(r.branch);
+  if (!info || !info.on_path) return false;
+  return info.path_until == null || r.step <= info.path_until;
+}
 // Half-lives are the agent's way of typing a beta; the page shows betas only.
 const HIDDEN_CONFIG_KEYS = new Set(["beta1_half_life", "beta2_half_life"]);
 let selectedId = null;
@@ -201,7 +234,7 @@ function drawTree() {
 
   for (const b of RUN.branches) {
     const live = b.on_path;
-    const colour = live ? css("--change") : css("--dead");
+    const colour = live ? css("--live") : css("--dead");
     const x0 = x(b.fork_step);
     const lastStep = b.last_step ?? b.fork_step;
     // A branch on the lineage counts as the path only up to where its child forked
@@ -263,15 +296,29 @@ function drawTree() {
   }
 
   for (const r of RUN.reviews) {
-    const colour = css("--" + r.kind);
+    // Colour says whether the final model went through this review, exactly as it
+    // does for the lanes; shape says what the agent did. Keeping the two on
+    // separate channels is what lets you pick the handful of decisions that
+    // actually shaped the result out of the whole search.
+    const colour = onFinalPath(r) ? css("--live") : css("--dead");
+    const cx = x(r.step), cy = y(r.branch);
     const g = el("g", { class: "node", tabindex: "0", role: "button" });
-    g.appendChild(el("circle", { class: "halo", cx: x(r.step), cy: y(r.branch), r: 11,
-                                 fill: colour, opacity: r.review_id === selectedId ? .3 : 0 }));
-    g.appendChild(el("circle", {
-      cx: x(r.step), cy: y(r.branch), r: r.kind === "noop" ? 4 : 5.5,
-      fill: r.kind === "noop" ? css("--panel") : colour,
-      stroke: r.kind === "noop" ? colour : css("--surface"), "stroke-width": 1.8,
-    }));
+    g.appendChild(el("circle", { class: "halo", cx: cx, cy: cy, r: 11,
+                                 fill: css("--accent"), opacity: r.review_id === selectedId ? .3 : 0 }));
+    if (r.kind === "move") {                      // diamond
+      const s = 6;
+      g.appendChild(el("path", {
+        d: `M ${cx} ${cy - s} L ${cx + s} ${cy} L ${cx} ${cy + s} L ${cx - s} ${cy} Z`,
+        fill: colour, stroke: css("--surface"), "stroke-width": 1.8,
+      }));
+    } else {                                      // hollow = no-op, filled = config change
+      const hollow = r.kind === "noop";
+      g.appendChild(el("circle", {
+        cx: cx, cy: cy, r: hollow ? 4 : 5.5,
+        fill: hollow ? css("--panel") : colour,
+        stroke: hollow ? colour : css("--surface"), "stroke-width": 1.8,
+      }));
+    }
     g.appendChild(el("title", {}, `${r.review_id} · b${r.branch}@${r.step}`));
     const pick = () => select(r.review_id);
     g.addEventListener("click", pick);
@@ -382,7 +429,7 @@ function drawCurve() {
     const pts = layer.pts;
     if (!pts.length) continue;
     const isPath = layer.key === "path";
-    const colour = isPath ? css("--change") : layer.live ? css("--accent") : css("--dead");
+    const colour = isPath ? css("--live") : layer.live ? css("--accent") : css("--dead");
     const live = isPath;
     svg.appendChild(el("polyline", {
       points: pts.map(p => `${x(p[0])},${y(p[1])}`).join(" "),
