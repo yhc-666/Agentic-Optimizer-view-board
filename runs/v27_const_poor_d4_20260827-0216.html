@@ -203,8 +203,17 @@ function drawTree() {
     const live = b.on_path;
     const colour = live ? css("--change") : css("--dead");
     const x0 = x(b.fork_step);
-    const x1 = x(b.last_step ?? b.fork_step);
-    svg.appendChild(el("line", { x1: x0, x2: x1, y1: y(b.branch), y2: y(b.branch),
+    const lastStep = b.last_step ?? b.fork_step;
+    // A branch on the lineage counts as the path only up to where its child forked
+    // off; whatever it trained past that point was abandoned and draws as dead - the
+    // same cut pathSeries() applies to the curves.
+    const until = live && b.path_until != null ? Math.min(b.path_until, lastStep) : lastStep;
+    if (until < lastStep) {
+      svg.appendChild(el("line", { x1: x(until), x2: x(lastStep), y1: y(b.branch), y2: y(b.branch),
+                                   stroke: css("--dead"), "stroke-width": 1.6,
+                                   "stroke-linecap": "round" }));
+    }
+    svg.appendChild(el("line", { x1: x0, x2: x(until), y1: y(b.branch), y2: y(b.branch),
                                  stroke: colour, "stroke-width": live ? 3.2 : 1.6,
                                  "stroke-linecap": "round" }));
     svg.appendChild(el("text", { x: M.left - 10, y: y(b.branch) + 4, "text-anchor": "end",
