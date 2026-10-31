@@ -47,6 +47,14 @@
   .analysis summary { cursor: pointer; font-weight: 600; }
   .analysis li { margin-bottom: 8px; font-size: 13px; color: var(--ink2); }
   .analysis figure { margin: 18px 0; }
+  .latest { margin: 24px 0 40px; border: 1px solid var(--hairline); border-radius: 12px; padding: 22px; background: var(--panel); }
+  .latest h2 { margin: 0 0 6px; font-size: 20px; }
+  .latest .metrics { display: flex; flex-wrap: wrap; gap: 18px 36px; margin: 18px 0; }
+  .latest .metrics b { display: block; font-size: 22px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .latest .metrics span { font-size: 12px; color: var(--ink2); }
+  .latest .cta { display: inline-block; padding: 8px 14px; border-radius: 7px; background: var(--accent); color: white; }
+  .latest figure { margin: 22px 0 0; }
+  h2.history { font-size: 17px; margin: 32px 0 8px; }
   @media (max-width: 680px) {
     th:first-child, td:first-child, th:nth-child(5), td:nth-child(5) { display: none; }
     th, td { padding: 10px 6px; }
@@ -58,7 +66,10 @@
 <body>
 <main>
   <h1>Agentic Optimizer · view board</h1>
-  <p class="intro">54.7M 参数 · 同一初始配置与数据顺序 · 最终路径均为 6,000 步 · 分数为末 100 步 train loss，越低越好。</p>
+  <p class="intro">54.7M 参数 · 最终路径均为 6,000 步 · 分数为末 100 步 pre-update train loss，越低越好。</p>
+<section class="latest"><h2>最新实验 · Cosine 首轮 + Agent 分支探索</h2><p class="note run">search_cosine_memory_d4_20261031-0355</p><div class="metrics"><div><b>4.56954073</b><span>最终选中路径 · 末 100 步 loss</span></div><div><b>4.64016213</b><span>同 run 固定 cosine 首轮</span></div><div><b>↓ 1.522%</b><span>相对首轮改善</span></div><div><b>386.744M</b><span>实际训练 tokens，包含探索</span></div></div><a class="cta" href="runs/search_cosine_memory_d4_20261031-0355.html">打开交互轨迹 · 分支 / LR / 全部 review →</a><p class="note">先完成固定 cosine 6000 步，再探索；checkpoint 每 400 步保存，agent 自选 N×400 后观察。粗线标出最终选中路径。点击交互图中的 R 节点可查看实际动作、hypothesis / continuation、上下文与工具结果。</p><figure><a href="figures/search_cosine_memory_d4_20261031-0355_trajectory.png"><img src="figures/search_cosine_memory_d4_20261031-0355_trajectory.png" alt="本轮所有实验分支、终局分数与获胜路径"></a></figure></section>
+  <h2 class="history">历史实验对照</h2>
+  <p class="note">下图为此前已发布实验；最新两阶段 Search 的直接对照是上方同一次 run 的固定 cosine 首轮。不同版本的协议与搜索预算见各自记录。</p>
   <figure>
     <picture>
       <source srcset="train_loss_dark.png" media="(prefers-color-scheme: dark)">
@@ -72,13 +83,15 @@
     <tbody>
       <tr><td class="run">v41_agentic_poor_d4_20260831-1742</td><td>Search</td><td class="num">4.4833</td><td class="num">376.898M</td><td class="num">116</td><td><a href="runs/v41_agentic_poor_d4_20260831-1742.html">打开 →</a></td></tr>
       <tr class="online"><td class="run">online_poor_d4_20261022-0434</td><td>Online</td><td class="num">4.5183</td><td class="num">98.304M</td><td class="num">29</td><td><a href="runs/online_poor_d4_20261022-0434.html">打开 →</a></td></tr>
+      <tr><td class="run">search_cosine_memory_d4_20261031-0355</td><td>Search</td><td class="num">4.5695</td><td class="num">386.744M</td><td class="num">18</td><td><a href="runs/search_cosine_memory_d4_20261031-0355.html">打开 →</a></td></tr>
       <tr><td class="run">v27_wsd_poor_d4_20260826-2154</td><td>WSD</td><td class="num">4.5787</td><td class="num">98.304M</td><td class="num">0</td><td><a href="runs/v27_wsd_poor_d4_20260826-2154.html">打开 →</a></td></tr>
       <tr><td class="run">v27_cosine_poor_d4_20260827-0010</td><td>Cosine</td><td class="num">4.6169</td><td class="num">98.304M</td><td class="num">0</td><td><a href="runs/v27_cosine_poor_d4_20260827-0010.html">打开 →</a></td></tr>
       <tr><td class="run">v27_const_poor_d4_20260827-0216</td><td>Constant LR</td><td class="num">4.8111</td><td class="num">98.304M</td><td class="num">0</td><td><a href="runs/v27_const_poor_d4_20260827-0216.html">打开 →</a></td></tr>
     </tbody>
   </table></div>
   <p class="note">Online 与 baseline 各训练 98.304M tokens；Search 的训练量包含额外探索。LLM 调用和等待时间另有成本。这里展示的是单次运行结果，没有 held-out 评估。</p>
-<details class="analysis"><summary>Online · 操作轨迹与复盘</summary><p>29 次 review，10 次改参，19 次保持。<a href="runs/online_poor_d4_20261022-0434.html">逐次查看实际动作与模型记录 →</a></p><figure><img src="figures/online_poor_d4_20261022-0434_trajectory.png" alt="训练 loss、学习率和 beta2 的完整操作轨迹" loading="lazy"></figure><ul><li>Ten parameter changes and nineteen holds across twenty-nine reviews; beta1 never changed.</li><li>Early control adjusts beta2 half-life 692.8 -&gt; 150 -&gt; 300 and LR 1 -&gt; 0.5 -&gt; 1.</li><li>At 3600 the agent read its earlier LR-doubling review before doubling LR again to 2; it held that rate until 4200.</li><li>R0019 labels the previous expectation supported despite missing the explicit loss target of below 4.95.</li><li>The final four LR halvings exactly execute the plan recorded at step 4200.</li><li>The frozen prompt explicitly suggests closing staircase annealing; its timing and spacing are left to the agent.</li><li>Baseline betas remain fixed while the agent also tunes beta2, so this comparison does not isolate adaptive LR scheduling.</li><li>One trajectory cannot establish the causal benefit of any individual intervention or superiority over a well-tuned fixed schedule.</li></ul></details>
+<details class="analysis"><summary>Online · 操作轨迹与复盘</summary><p>29 次 review，10 次参数变更；每轮的调度、失败与终点停止以交互记录为准。<a href="runs/online_poor_d4_20261022-0434.html">逐次查看实际动作与模型记录 →</a></p><figure><img src="figures/online_poor_d4_20261022-0434_trajectory.png" alt="训练 loss、学习率和 beta2 的完整操作轨迹" loading="lazy"></figure><ul><li>Ten parameter changes and nineteen holds across twenty-nine reviews; beta1 never changed.</li><li>Early control adjusts beta2 half-life 692.8 -&gt; 150 -&gt; 300 and LR 1 -&gt; 0.5 -&gt; 1.</li><li>At 3600 the agent read its earlier LR-doubling review before doubling LR again to 2; it held that rate until 4200.</li><li>R0019 labels the previous expectation supported despite missing the explicit loss target of below 4.95.</li><li>The final four LR halvings exactly execute the plan recorded at step 4200.</li><li>The frozen prompt explicitly suggests closing staircase annealing; its timing and spacing are left to the agent.</li><li>Baseline betas remain fixed while the agent also tunes beta2, so this comparison does not isolate adaptive LR scheduling.</li><li>One trajectory cannot establish the causal benefit of any individual intervention or superiority over a well-tuned fixed schedule.</li></ul></details>
+<details class="analysis"><summary>Search · 操作轨迹与复盘</summary><p>18 次 review，10 次参数变更；每轮的调度、失败与终点停止以交互记录为准。<a href="runs/search_cosine_memory_d4_20261031-0355.html">逐次查看实际动作与模型记录 →</a></p><figure><img src="figures/search_cosine_memory_d4_20261031-0355_trajectory.png" alt="训练 loss、学习率和 beta2 的完整操作轨迹" loading="lazy"></figure><ul><li>本 run 固定 cosine 首轮 4.64016213；最佳 branch 7 / C0057 为 4.56954073，降低 0.07062140（1.522%）。</li><li>10 条分支、5 条完成路径；所有终点都重建为完整 6000 步，并独立复算末 100 步 loss。未完成分支不参与最终排序。</li><li>成功 run_steps 的选择：N=1 共 3 次；N=2 共 2 次；N=3 共 10 次；N=6 共 1 次；checkpoint 每 400 步保存，期间没有强制 review。</li><li>实际 23,600 次参数更新，计账 23,605 个前后向等价 batch；差额 5 来自回退丢弃的 pending batch。额外预算剩 395 步。</li><li>累计 274 次 API 请求，记录输入 4,509,978 / 输出 13,922 tokens；agent 用时 1470.4 秒。</li><li>训练动作与调度由工具回执和 L1 确认；summary/hypothesis 是 agent 原始解释，不等同于验证过的机制。</li><li>失败 review：R0011；fallback 与 agent 主动选择 N=1 分开计数。</li></ul></details>
 </main>
 </body>
 </html>
